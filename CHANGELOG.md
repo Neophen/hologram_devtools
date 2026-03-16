@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+### Improvements
+- Update OTP to 28 and Elixir to 1.18
+
 ## 0.1.2
 
 ### Improvements
