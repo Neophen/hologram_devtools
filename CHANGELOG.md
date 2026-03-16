@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+### Improvements
+- Added **guides** for welcome, installation, and configuration
+- Restructured **documentation** with improved navigation and module grouping
+
 ## 0.1.3
 
 ### Improvements
