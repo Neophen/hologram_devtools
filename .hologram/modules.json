@@ -1,0 +1,22 @@
+{
+  "HologramDevtools": {
+    "line": 1,
+    "file": "lib/hologram_devtools.ex"
+  },
+  "HologramDevtools.Application": {
+    "line": 1,
+    "file": "lib/hologram_devtools/application.ex"
+  },
+  "HologramDevtools.Introspection.Extractor": {
+    "line": 1,
+    "file": "lib/hologram_devtools/introspection/extractor.ex"
+  },
+  "HologramDevtools.Introspection.Store": {
+    "line": 1,
+    "file": "lib/hologram_devtools/introspection/store.ex"
+  },
+  "HologramDevtools.Introspection.Watcher": {
+    "line": 1,
+    "file": "lib/hologram_devtools/introspection/watcher.ex"
+  }
+}
