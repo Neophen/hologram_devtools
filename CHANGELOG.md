@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.13
+
+### Improvements
+- Renamed module namespace to **holo_dev** for cleaner naming
+- Changed default output directory to **.holo_dev**
+
 ## 0.4.12
 
 ## 0.4.11
