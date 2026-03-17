@@ -2,7 +2,7 @@ defmodule HoloDev.Web.WebSocketHandler do
   @moduledoc false
   @behaviour WebSock
 
-  alias HoloDev.Introspection.{Store, StateTracker}
+  alias HoloDev.Introspection.{Store, StateTracker, LiveStateStore}
 
   @impl WebSock
   def init(_args) do
@@ -48,6 +48,10 @@ defmodule HoloDev.Web.WebSocketHandler do
     end
   rescue
     _ -> {:ok, state}
+  end
+
+  def handle_info({:bridge_event, _event_type, encoded_msg}, state) do
+    {:push, {:text, encoded_msg}, state}
   end
 
   def handle_info(_msg, state) do
@@ -154,6 +158,74 @@ defmodule HoloDev.Web.WebSocketHandler do
   defp handle_message(%{"type" => "subscribe"}, state) do
     msg = JSON.encode!(%{type: "subscribed", data: %{message: "Subscribed to updates"}})
     {:push, {:text, msg}, %{state | subscribed_events: true}}
+  end
+
+  defp handle_message(%{"type" => "get_live_tree"}, state) do
+    pages = Store.pages()
+    components = Store.components()
+    snapshot = LiveStateStore.get_snapshot()
+
+    tree = build_live_tree(pages, components, snapshot)
+    msg = JSON.encode!(%{type: "live_tree", data: tree})
+    {:push, {:text, msg}, state}
+  end
+
+  defp handle_message(%{"type" => "get_live_state", "cid" => cid}, state) do
+    snapshot = LiveStateStore.get_snapshot()
+
+    live_state =
+      if snapshot do
+        cond do
+          cid == "page" && snapshot["page"] ->
+            snapshot["page"]
+
+          snapshot["components"] && snapshot["components"][cid] ->
+            snapshot["components"][cid]
+
+          true ->
+            nil
+        end
+      end
+
+    if live_state do
+      msg = JSON.encode!(%{type: "live_state", data: live_state})
+      {:push, {:text, msg}, state}
+    else
+      msg = JSON.encode!(%{type: "error", data: %{message: "No live state for CID: #{cid}"}})
+      {:push, {:text, msg}, state}
+    end
+  end
+
+  defp handle_message(%{"type" => "edit_state", "cid" => cid, "path" => path, "value" => value}, state) do
+    forward_to_bridge(%{type: "edit_state", cid: cid, path: path, value: value})
+    msg = JSON.encode!(%{type: "state_edited", data: %{cid: cid, path: path}})
+    {:push, {:text, msg}, state}
+  end
+
+  defp handle_message(%{"type" => "dispatch_action", "target" => target, "name" => name} = message, state) do
+    params = Map.get(message, "params", %{})
+    forward_to_bridge(%{type: "dispatch_action", target: target, name: name, params: params})
+    {:ok, state}
+  end
+
+  defp handle_message(%{"type" => "get_action_history"} = message, state) do
+    limit = Map.get(message, "limit", 200)
+    actions = LiveStateStore.get_actions(limit)
+    msg = JSON.encode!(%{type: "action_history", data: actions})
+    {:push, {:text, msg}, state}
+  end
+
+  defp handle_message(%{"type" => "open_in_editor", "file" => file} = message, state) do
+    line = Map.get(message, "line", 1)
+    editor = Application.get_env(:holo_dev, :editor, "code")
+    path = Path.expand(file, File.cwd!())
+
+    Task.start(fn ->
+      System.cmd(editor, ["--goto", "#{path}:#{line}"], stderr_to_stdout: true)
+    end)
+
+    msg = JSON.encode!(%{type: "editor_opened", data: %{file: file, line: line}})
+    {:push, {:text, msg}, state}
   end
 
   defp handle_message(%{"type" => type}, state) do
@@ -363,5 +435,99 @@ defmodule HoloDev.Web.WebSocketHandler do
 
   defp short_name(full_name) do
     full_name |> String.split(".") |> List.last()
+  end
+
+  # Build a live tree merging static metadata with live snapshot data
+  defp build_live_tree(pages, components, snapshot) do
+    component_lookup =
+      components
+      |> Enum.into(%{}, fn {name, info} ->
+        {short_name(name), {name, info}}
+      end)
+
+    page_nodes =
+      pages
+      |> Enum.sort_by(fn {name, _} -> name end)
+      |> Enum.map(fn {name, page_info} ->
+        layout_module = Map.get(page_info, :layoutModule)
+        children = build_page_children(layout_module, page_info, component_lookup)
+
+        # Merge live CIDs from snapshot
+        children = attach_live_cids(children, snapshot)
+
+        # Get page state summary from snapshot
+        page_state_summary =
+          if snapshot && snapshot["page"] && snapshot["page"]["state"] do
+            Map.keys(snapshot["page"]["state"])
+          else
+            Map.get(page_info, :stateKeys, [])
+          end
+
+        %{
+          id: name,
+          name: short_name(name),
+          type: "page",
+          route: Map.get(page_info, :route),
+          file: page_info[:file],
+          cid: "page",
+          state_keys: page_state_summary,
+          children: children
+        }
+      end)
+
+    %{
+      root: %{id: "root", name: "Application", type: "root", children: page_nodes},
+      bridge_connected: LiveStateStore.bridge_connected?(),
+      snapshot_timestamp: snapshot && snapshot["timestamp"]
+    }
+  end
+
+  # Attach live CIDs from the snapshot to the static tree nodes
+  defp attach_live_cids(children, nil), do: children
+
+  defp attach_live_cids(children, snapshot) do
+    live_components = snapshot["components"] || %{}
+
+    # Build a lookup of module name -> list of CIDs
+    cids_by_module =
+      Enum.group_by(
+        live_components,
+        fn {_cid, comp} -> comp["module"] end,
+        fn {cid, _comp} -> cid end
+      )
+
+    Enum.map(children, fn node ->
+      module_name = node[:id]
+      short = node[:name]
+
+      # Try to find CIDs for this component
+      cids =
+        Map.get(cids_by_module, module_name, []) ++
+          Map.get(cids_by_module, short, [])
+
+      state_keys =
+        case cids do
+          [first_cid | _] ->
+            comp = live_components[first_cid]
+            if comp && comp["state"], do: Map.keys(comp["state"]), else: []
+          [] ->
+            []
+        end
+
+      node
+      |> Map.put(:cids, cids)
+      |> Map.put(:state_keys, state_keys)
+      |> Map.update(:children, [], &attach_live_cids(&1, snapshot))
+    end)
+  end
+
+  defp forward_to_bridge(message) do
+    Registry.dispatch(HoloDev.BridgeRegistry, :bridge, fn entries ->
+      for {pid, _value} <- entries do
+        send(pid, {:forward_to_bridge, message})
+      end
+    end)
+  rescue
+    _ -> :ok
   end
 end

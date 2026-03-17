@@ -9,8 +9,10 @@ defmodule HoloDev.Application do
     else
       children = [
         {Registry, keys: :duplicate, name: HoloDev.WebSocketRegistry},
+        {Registry, keys: :duplicate, name: HoloDev.BridgeRegistry},
         HoloDev.Introspection.Store,
         HoloDev.Introspection.StateTracker,
+        HoloDev.Introspection.LiveStateStore,
         HoloDev.Introspection.Watcher,
         {Bandit, plug: HoloDev.Web.Endpoint, port: HoloDev.port(), ip: {127, 0, 0, 1}}
       ]
@@ -21,6 +23,7 @@ defmodule HoloDev.Application do
         {:ok, pid} ->
           IO.puts("[HoloDev] Running at http://localhost:#{HoloDev.port()}")
           IO.puts("[HoloDev] WebSocket at ws://localhost:#{HoloDev.port()}/ws")
+          IO.puts("[HoloDev] Bridge at ws://localhost:#{HoloDev.port()}/bridge")
           {:ok, pid}
 
         error ->

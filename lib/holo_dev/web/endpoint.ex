@@ -20,6 +20,23 @@ defmodule HoloDev.Web.Endpoint do
     |> Plug.Conn.upgrade_adapter(:websocket, {HoloDev.Web.WebSocketHandler, [], []})
   end
 
+  get "/bridge" do
+    conn
+    |> Plug.Conn.upgrade_adapter(:websocket, {HoloDev.Web.BridgeHandler, [], []})
+  end
+
+  get "/bridge.js" do
+    bridge_path = :code.priv_dir(:holo_dev) |> to_string() |> Path.join("bridge.js")
+
+    if File.exists?(bridge_path) do
+      conn
+      |> put_resp_content_type("application/javascript")
+      |> send_resp(200, File.read!(bridge_path))
+    else
+      send_resp(conn, 404, "bridge.js not found")
+    end
+  end
+
   get "/" do
     pages = HoloDev.Introspection.Store.pages()
     components = HoloDev.Introspection.Store.components()
