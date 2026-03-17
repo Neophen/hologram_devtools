@@ -3838,3 +3838,11 @@ Eval resulted in:
 09:09:03.713 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 373µs
 
 09:09:07.771 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 636µs
+
+09:21:54.631 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 500µs
+
+09:23:08.926 instance_id=19CFA3F2D42 [debug] sent notification server -> client window/logMessage
+
+09:23:08.926 instance_id=19CFA3F2D42 [info] Unhandled notification: $/setTrace
+
+09:23:08.926 instance_id=19CFA3F2D42 [debug] handled notification client -> server $/setTrace in 1ms
