@@ -10,9 +10,23 @@ defmodule HoloDev.Introspection.Watcher do
 
   @impl GenServer
   def init(_) do
-    {:ok, pid} = FileSystem.start_link(dirs: [Path.join(File.cwd!(), "lib")])
+    dirs = watched_dirs()
+    {:ok, pid} = FileSystem.start_link(dirs: dirs)
     FileSystem.subscribe(pid)
     {:ok, %{fs_pid: pid, timer: nil}}
+  end
+
+  defp watched_dirs do
+    cwd = File.cwd!()
+
+    Mix.Project.config()[:elixirc_paths]
+    |> Kernel.||([])
+    |> Enum.map(&Path.join(cwd, &1))
+    |> Enum.filter(&File.dir?/1)
+    |> case do
+      [] -> [Path.join(cwd, "lib")]
+      dirs -> dirs
+    end
   end
 
   @impl GenServer

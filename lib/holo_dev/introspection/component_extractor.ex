@@ -12,9 +12,9 @@ defmodule HoloDev.Introspection.ComponentExtractor do
 
   defp component?(mod) do
     Code.ensure_loaded?(mod) and
-      function_exported?(mod, :__using__, 0) and
+      function_exported?(mod, :__is_hologram_component__, 0) and
       try do
-        mod.__using__() == Hologram.Component
+        mod.__is_hologram_component__() == true
       rescue
         _ -> false
       end

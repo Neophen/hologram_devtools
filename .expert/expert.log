@@ -3826,3 +3826,15 @@ Eval resulted in:
 08:02:08.721 instance_id=19CFA3F2D42 [debug] handled request client -> server textDocument/codeLens in 740µs
 
 08:02:08.830 instance_id=19CFA3F2D42 [debug] handled request client -> server textDocument/documentSymbol in 59ms
+
+08:13:31.674 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 1ms
+
+08:28:43.316 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 1ms
+
+08:28:49.585 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 506µs
+
+09:09:02.041 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 1ms
+
+09:09:03.713 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 373µs
+
+09:09:07.771 instance_id=19CFA3F2D42 [debug] handled notification client -> server workspace/didChangeWatchedFiles in 636µs

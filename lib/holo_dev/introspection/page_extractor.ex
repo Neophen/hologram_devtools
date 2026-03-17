@@ -12,9 +12,9 @@ defmodule HoloDev.Introspection.PageExtractor do
 
   defp page?(mod) do
     Code.ensure_loaded?(mod) and
-      function_exported?(mod, :__using__, 0) and
+      function_exported?(mod, :__is_hologram_page__, 0) and
       try do
-        mod.__using__() == Hologram.Page
+        mod.__is_hologram_page__() == true
       rescue
         _ -> false
       end
@@ -60,7 +60,7 @@ defmodule HoloDev.Introspection.PageExtractor do
   end
 
   defp extract_props(mod) do
-    mod.__props__()
+    mod.__params__()
     |> Enum.map(fn {prop_name, prop_type, opts} ->
       resolved_type =
         case prop_type do
