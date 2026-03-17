@@ -1,7 +1,7 @@
 defmodule HoloDev.MixProject do
   use Mix.Project
 
-  @version "0.4.11"
+  @version "0.4.12"
   @source_url "https://github.com/Neophen/holo_dev"
 
   def project do
