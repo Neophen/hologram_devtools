@@ -74,45 +74,52 @@ defmodule HoloDev.Web.WebSocketHandler do
   end
 
   defp handle_message(%{"type" => "get_component", "id" => id}, state) do
+    # Check for loop instance ID format: "ModuleName#index"
+    {base_id, instance_index} = parse_instance_id(id)
+
     pages = Store.pages()
     components = Store.components()
 
     # Try to find component info by module name first, then by CID
     data =
-      case Map.get(pages, id) do
-        nil -> Map.get(components, id)
+      case Map.get(pages, base_id) do
+        nil -> Map.get(components, base_id)
         page -> page
       end
 
     # If not found by module name, try to find by CID from live data
     {data, _resolved_module} =
       if data do
-        {data, id}
+        {data, base_id}
       else
-        case get_live_data_for_component(id) do
+        case get_live_data_for_component(base_id) do
           {:ok, %{module: mod_name}} ->
             static_data = Map.get(components, mod_name, %{})
             {static_data, mod_name}
           _ ->
-            {nil, id}
+            {nil, base_id}
         end
       end
 
     if data do
       data = Map.put(data, :id, id)
 
-      # Attach live state for pages
+      # If this is a loop instance, resolve its props
       data =
-        case get_live_data_for_component(id) do
-          {:ok, %{state: live_state, props: live_props}} ->
-            data |> Map.put(:state, live_state) |> Map.put(:liveProps, live_props)
+        if instance_index != nil do
+          resolve_loop_instance_props(data, base_id, instance_index, pages)
+        else
+          # Attach live state for pages
+          case get_live_data_for_component(base_id) do
+            {:ok, %{state: live_state, props: live_props}} ->
+              data |> Map.put(:state, live_state) |> Map.put(:liveProps, live_props)
 
-          {:ok, %{state: live_state}} ->
-            Map.put(data, :state, live_state)
+            {:ok, %{state: live_state}} ->
+              Map.put(data, :state, live_state)
 
-          _ ->
-            # For components without CIDs, resolve props from page state
-            data |> maybe_resolve_props_from_state(id)
+            _ ->
+              data |> maybe_resolve_props_from_state(base_id)
+          end
         end
 
       msg = JSON.encode!(%{type: "component", data: data})
@@ -171,28 +178,63 @@ defmodule HoloDev.Web.WebSocketHandler do
   end
 
   defp handle_message(%{"type" => "get_live_state", "cid" => cid}, state) do
-    snapshot = LiveStateStore.get_snapshot()
+    {base_id, instance_index} = parse_instance_id(cid)
 
-    live_state =
-      if snapshot do
-        cond do
-          cid == "page" && snapshot["page"] ->
-            snapshot["page"]
+    # If it's a loop instance, resolve from page state
+    if instance_index != nil do
+      pages = Store.pages()
+      components = Store.components()
+      static_data = Map.get(components, base_id) || %{}
 
-          snapshot["components"] && snapshot["components"][cid] ->
-            snapshot["components"][cid]
+      result =
+        %{
+          "module" => base_id,
+          "cid" => cid,
+          "actions" => Map.get(static_data, :actions, []),
+          "commands" => Map.get(static_data, :commands, []),
+          "props" => Map.get(static_data, :props, []),
+          "functions" => Map.get(static_data, :functions, []),
+          "file" => Map.get(static_data, :file),
+          "line" => Map.get(static_data, :line)
+        }
 
-          true ->
-            nil
-        end
-      end
+      # Resolve instance props
+      result = resolve_loop_instance_props(result, base_id, instance_index, pages)
 
-    if live_state do
-      msg = JSON.encode!(%{type: "live_state", data: live_state})
+      msg = JSON.encode!(%{type: "live_state", data: result})
       {:push, {:text, msg}, state}
     else
-      msg = JSON.encode!(%{type: "error", data: %{message: "No live state for CID: #{cid}"}})
-      {:push, {:text, msg}, state}
+      snapshot = LiveStateStore.get_snapshot()
+      live_state = resolve_live_state(base_id, snapshot)
+
+      if live_state do
+        module_name = live_state["module"]
+
+        static_data =
+          if module_name do
+            Map.get(Store.pages(), module_name) || Map.get(Store.components(), module_name) || %{}
+          else
+            %{}
+          end
+
+        merged = Map.merge(
+          %{
+            "actions" => Map.get(static_data, :actions, []),
+            "commands" => Map.get(static_data, :commands, []),
+            "props" => Map.get(static_data, :props, []),
+            "functions" => Map.get(static_data, :functions, []),
+            "file" => Map.get(static_data, :file),
+            "line" => Map.get(static_data, :line)
+          },
+          live_state
+        )
+
+        msg = JSON.encode!(%{type: "live_state", data: merged})
+        {:push, {:text, msg}, state}
+      else
+        msg = JSON.encode!(%{type: "error", data: %{message: "No live state for: #{cid}"}})
+        {:push, {:text, msg}, state}
+      end
     end
   end
 
@@ -308,16 +350,157 @@ defmodule HoloDev.Web.WebSocketHandler do
     runtime_nodes ++ [layout_node]
   end
 
-  defp build_template_children(info, component_lookup) do
+  defp build_template_children(info, component_lookup, depth \\ 0)
+
+  defp build_template_children(_info, _component_lookup, depth) when depth > 10, do: []
+
+  defp build_template_children(info, component_lookup, depth) do
+    template_structure = Map.get(info, :templateStructure, %{})
+
     Map.get(info, :templateComponents, [])
-    |> Enum.map(&make_node(&1, component_lookup, "component"))
+    |> Enum.flat_map(fn comp_name ->
+      case Map.get(template_structure, comp_name) do
+        entries when is_list(entries) and entries != [] ->
+          loop_entry = Enum.find(entries, fn e -> e[:loop] != nil end)
+
+          if loop_entry do
+            expand_loop_component(comp_name, loop_entry, component_lookup, info, depth)
+          else
+            [make_node(comp_name, component_lookup, "component", depth)]
+          end
+
+        _ ->
+          [make_node(comp_name, component_lookup, "component", depth)]
+      end
+    end)
   end
 
-  defp make_node(comp_name, component_lookup, default_type) do
+  # Expand a loop component into N nodes based on page state
+  defp expand_loop_component(comp_name, %{loop: %{source: source_key, iterator: iterator}, bindings: bindings}, component_lookup, page_info, depth) do
+    # Try to get the list from page state
+    items = get_page_state_list(source_key, page_info)
+
+    case items do
+      items when is_list(items) and items != [] ->
+        {full_name, comp_info} =
+          case Map.get(component_lookup, comp_name) do
+            {name, info} -> {name, info}
+            nil -> {comp_name, %{}}
+          end
+
+        items
+        |> Enum.with_index()
+        |> Enum.map(fn {item, idx} ->
+          # Resolve props: substitute iterator variable with the list item
+          instance_props =
+            Enum.into(bindings, %{}, fn %{prop: prop_name, expression: expr} ->
+              value =
+                if expr == iterator do
+                  item
+                else
+                  resolve_expression(expr, %{})
+                end
+
+              {prop_name, value}
+            end)
+
+          # Recursively build children from this component's own template
+          children = build_template_children(comp_info, component_lookup, depth + 1)
+
+          %{
+            id: "#{full_name}##{idx}",
+            name: "#{comp_name}[#{idx}]",
+            type: "component",
+            file: comp_info[:file],
+            instance_index: idx,
+            instance_props: instance_props,
+            loop_source: source_key,
+            children: children
+          }
+        end)
+
+      _ ->
+        # State unavailable — fall back to single node
+        [make_node(comp_name, component_lookup, "component")]
+    end
+  end
+
+  # Get a list value from page state (tries bridge snapshot first, then StateTracker)
+  defp get_page_state_list(source_key, _page_info) do
+    # Try bridge snapshot first
+    snapshot = LiveStateStore.get_snapshot()
+
+    bridge_list =
+      if snapshot && snapshot["page"] && snapshot["page"]["state"] do
+        case snapshot["page"]["state"][source_key] do
+          %{"_t" => "list", "v" => items} when is_list(items) ->
+            # Unbox typed values to plain maps for display
+            Enum.map(items, &unbox_typed_value/1)
+
+          items when is_list(items) ->
+            items
+
+          _ ->
+            nil
+        end
+      end
+
+    if bridge_list do
+      bridge_list
+    else
+      # Fall back to StateTracker
+      pages = Store.pages()
+
+      page_name =
+        Enum.find_value(pages, fn {name, info} ->
+          if Map.get(info, :stateKeys, []) |> Enum.member?(source_key), do: name
+        end)
+
+      if page_name do
+        page_mod =
+          try do
+            String.to_existing_atom("Elixir." <> page_name)
+          rescue
+            _ -> nil
+          end
+
+        case page_mod && StateTracker.get_state(page_mod) do
+          %{page_state: page_state} ->
+            case Map.get(page_state, source_key) do
+              items when is_list(items) -> items
+              _ -> nil
+            end
+
+          _ ->
+            nil
+        end
+      end
+    end
+  end
+
+  # Convert typed values from bridge snapshot to plain display values
+  defp unbox_typed_value(%{"_t" => "map", "v" => fields}) when is_map(fields) do
+    Map.new(fields, fn {k, v} -> {k, unbox_typed_value(v)} end)
+  end
+
+  defp unbox_typed_value(%{"_t" => "struct", "v" => fields, "module" => mod}) when is_map(fields) do
+    Map.new(fields, fn {k, v} -> {k, unbox_typed_value(v)} end)
+    |> Map.put("__struct__", mod)
+  end
+
+  defp unbox_typed_value(%{"_t" => "list", "v" => items}) when is_list(items) do
+    Enum.map(items, &unbox_typed_value/1)
+  end
+
+  defp unbox_typed_value(%{"_t" => _, "v" => v}), do: v
+  defp unbox_typed_value(other), do: other
+
+  defp make_node(comp_name, component_lookup, default_type, depth \\ 0) do
     case Map.get(component_lookup, comp_name) do
       {full_name, info} ->
         type = if comp_name == "Runtime", do: "runtime", else: default_type
-        %{id: full_name, name: comp_name, type: type, file: info[:file], children: []}
+        children = build_template_children(info, component_lookup, depth + 1)
+        %{id: full_name, name: comp_name, type: type, file: info[:file], children: children}
       nil ->
         %{id: comp_name, name: comp_name, type: default_type, children: []}
     end
@@ -433,11 +616,87 @@ defmodule HoloDev.Web.WebSocketHandler do
     _ -> :error
   end
 
+  # Parse "ModuleName#2" → {"ModuleName", 2} or "ModuleName" → {"ModuleName", nil}
+  defp parse_instance_id(id) do
+    case String.split(id, "#", parts: 2) do
+      [base, idx_str] ->
+        case Integer.parse(idx_str) do
+          {idx, ""} -> {base, idx}
+          _ -> {id, nil}
+        end
+
+      _ ->
+        {id, nil}
+    end
+  end
+
+  # Resolve props for a specific loop instance
+  defp resolve_loop_instance_props(data, module_name, index, pages) do
+    comp_short = short_name(module_name)
+
+    # Find which page uses this component and its loop metadata
+    Enum.find_value(pages, data, fn {_page_name, page_info} ->
+      template_structure = Map.get(page_info, :templateStructure, %{})
+
+      case Map.get(template_structure, comp_short) do
+        entries when is_list(entries) ->
+          loop_entry = Enum.find(entries, fn e -> e[:loop] != nil end)
+
+          if loop_entry do
+            %{loop: %{source: source_key, iterator: iterator}, bindings: bindings} = loop_entry
+            items = get_page_state_list(source_key, page_info)
+
+            if is_list(items) && index < length(items) do
+              item = Enum.at(items, index)
+
+              instance_props =
+                Enum.into(bindings, %{}, fn %{prop: prop_name, expression: expr} ->
+                  value = if expr == iterator, do: item, else: expr
+                  {prop_name, value}
+                end)
+
+              Map.put(data, :instance_props, instance_props)
+            else
+              data
+            end
+          end
+
+        _ ->
+          nil
+      end
+    end)
+  end
+
   defp short_name(full_name) do
     full_name |> String.split(".") |> List.last()
   end
 
-  # Build a live tree merging static metadata with live snapshot data
+  # Resolve live state from the snapshot by CID or module name
+  defp resolve_live_state(_id, nil), do: nil
+
+  defp resolve_live_state("page", snapshot) do
+    snapshot["page"]
+  end
+
+  defp resolve_live_state(id, snapshot) do
+    components = snapshot["components"] || %{}
+
+    # Try direct CID lookup first
+    case Map.get(components, id) do
+      %{} = comp -> comp
+      nil ->
+        # Try matching by module name (full or short)
+        Enum.find_value(components, fn {_cid, comp} ->
+          module = comp["module"] || ""
+
+          if module == id || short_name(module) == short_name(id) do
+            comp
+          end
+        end)
+    end
+  end
+
+  # Build a live tree showing only the currently active page from the snapshot
   defp build_live_tree(pages, components, snapshot) do
     component_lookup =
       components
@@ -445,15 +704,41 @@ defmodule HoloDev.Web.WebSocketHandler do
         {short_name(name), {name, info}}
       end)
 
+    live_components = if snapshot, do: snapshot["components"] || %{}, else: %{}
+
+    # Build CID lookup: module name -> list of CIDs
+    cids_by_module =
+      Enum.group_by(
+        live_components,
+        fn {_cid, comp} -> comp["module"] end,
+        fn {cid, _comp} -> cid end
+      )
+
+    # Determine the active page from the snapshot
+    active_page_module =
+      if snapshot && snapshot["page"] do
+        snapshot["page"]["module"]
+      end
+
+    # Filter pages to only the active one (or show all if no snapshot)
+    filtered_pages =
+      if active_page_module do
+        Enum.filter(pages, fn {name, _info} ->
+          name == active_page_module || short_name(name) == short_name(active_page_module)
+        end)
+      else
+        Enum.into(pages, [])
+      end
+
     page_nodes =
-      pages
+      filtered_pages
       |> Enum.sort_by(fn {name, _} -> name end)
       |> Enum.map(fn {name, page_info} ->
         layout_module = Map.get(page_info, :layoutModule)
         children = build_page_children(layout_module, page_info, component_lookup)
 
-        # Merge live CIDs from snapshot
-        children = attach_live_cids(children, snapshot)
+        # Attach live CIDs to children
+        children = attach_live_cids(children, live_components, cids_by_module)
 
         # Get page state summary from snapshot
         page_state_summary =
@@ -478,29 +763,18 @@ defmodule HoloDev.Web.WebSocketHandler do
     %{
       root: %{id: "root", name: "Application", type: "root", children: page_nodes},
       bridge_connected: LiveStateStore.bridge_connected?(),
-      snapshot_timestamp: snapshot && snapshot["timestamp"]
+      snapshot_timestamp: snapshot && snapshot["timestamp"],
+      active_page: active_page_module
     }
   end
 
   # Attach live CIDs from the snapshot to the static tree nodes
-  defp attach_live_cids(children, nil), do: children
-
-  defp attach_live_cids(children, snapshot) do
-    live_components = snapshot["components"] || %{}
-
-    # Build a lookup of module name -> list of CIDs
-    cids_by_module =
-      Enum.group_by(
-        live_components,
-        fn {_cid, comp} -> comp["module"] end,
-        fn {cid, _comp} -> cid end
-      )
-
+  defp attach_live_cids(children, live_components, cids_by_module) do
     Enum.map(children, fn node ->
       module_name = node[:id]
       short = node[:name]
 
-      # Try to find CIDs for this component
+      # Try to find CIDs for this component by full module name or short name
       cids =
         Map.get(cids_by_module, module_name, []) ++
           Map.get(cids_by_module, short, [])
@@ -517,7 +791,7 @@ defmodule HoloDev.Web.WebSocketHandler do
       node
       |> Map.put(:cids, cids)
       |> Map.put(:state_keys, state_keys)
-      |> Map.update(:children, [], &attach_live_cids(&1, snapshot))
+      |> Map.update(:children, [], &attach_live_cids(&1, live_components, cids_by_module))
     end)
   end
 

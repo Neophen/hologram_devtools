@@ -36,6 +36,9 @@ defmodule HoloDev.Introspection.ComponentExtractor do
     template_components =
       if source, do: SourceParser.extract_template_components(source), else: []
 
+    template_structure =
+      if source, do: SourceParser.extract_template_structure(source), else: %{}
+
     result = %{
       file: relative_path,
       line: mod_line,
@@ -43,7 +46,8 @@ defmodule HoloDev.Introspection.ComponentExtractor do
       actions: actions,
       commands: commands,
       functions: functions,
-      templateComponents: template_components
+      templateComponents: template_components,
+      templateStructure: template_structure
     }
 
     result = if template_line, do: Map.put(result, :templateLine, template_line), else: result

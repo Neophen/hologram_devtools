@@ -143,6 +143,123 @@ defmodule HoloDev.Introspection.SourceParser do
     end
   end
 
+  @doc """
+  Parses the ~HOLO template using Hologram's own parser and extracts
+  component structure including for-loop relationships.
+
+  Returns a map like:
+    %{
+      "PostPreview" => %{
+        loop: %{iterator: "post", source: "posts"},
+        bindings: [%{prop: "post", expression: "post"}]
+      },
+      "Link" => %{loop: nil, bindings: [%{prop: "to", expression: "PostPage"}]}
+    }
+  """
+  def extract_template_structure(source_path) do
+    with {:ok, content} <- File.read(source_path),
+         [_, template_body] <- Regex.run(~r/~HOLO\s*"""\s*\n(.*?)"""/s, content) do
+      tags = Hologram.Template.Parser.parse_markup(template_body)
+      walk_tags(tags, [], %{})
+    else
+      _ -> %{}
+    end
+  rescue
+    _ -> %{}
+  end
+
+  # Walk parsed tags maintaining a stack of active for-loop contexts
+  defp walk_tags([], _loop_stack, acc), do: acc
+
+  defp walk_tags([{:block_start, {"for", expr_str}} | rest], loop_stack, acc) do
+    loop_ctx = parse_for_expression(expr_str)
+    walk_tags(rest, [loop_ctx | loop_stack], acc)
+  end
+
+  defp walk_tags([{:block_end, "for"} | rest], [_ | loop_stack], acc) do
+    walk_tags(rest, loop_stack, acc)
+  end
+
+  defp walk_tags([{:block_end, "for"} | rest], [], acc) do
+    walk_tags(rest, [], acc)
+  end
+
+  defp walk_tags([{tag_type, {tag_name, attrs}} | rest], loop_stack, acc)
+       when tag_type in [:self_closing_tag, :start_tag] do
+    # Check if this is a component (PascalCase first char)
+    acc =
+      if component_tag?(tag_name) do
+        bindings = extract_bindings_from_attrs(attrs)
+        loop = List.first(loop_stack)
+
+        entry = %{
+          loop: loop,
+          bindings: bindings
+        }
+
+        # Use Map.update to handle multiple occurrences (append as list)
+        Map.update(acc, tag_name, [entry], fn existing -> existing ++ [entry] end)
+      else
+        acc
+      end
+
+    walk_tags(rest, loop_stack, acc)
+  end
+
+  defp walk_tags([_ | rest], loop_stack, acc) do
+    walk_tags(rest, loop_stack, acc)
+  end
+
+  defp component_tag?(<<first::utf8, _rest::binary>>) when first in ?A..?Z, do: true
+  defp component_tag?(_), do: false
+
+  # Parse "{  post <- @posts}" → %{iterator: "post", source: "posts"}
+  defp parse_for_expression(expr_str) do
+    # Strip outer braces and trim
+    inner =
+      expr_str
+      |> String.trim()
+      |> String.replace_leading("{", "")
+      |> String.replace_trailing("}", "")
+      |> String.trim()
+
+    case Regex.run(~r/(\w+)\s*<-\s*@(\w+)/, inner) do
+      [_, iterator, source] ->
+        %{iterator: iterator, source: source}
+
+      _ ->
+        # Fallback: try without @ (e.g. nested loops)
+        case Regex.run(~r/(\w+)\s*<-\s*(\w+)/, inner) do
+          [_, iterator, source] -> %{iterator: iterator, source: source}
+          _ -> nil
+        end
+    end
+  end
+
+  # Extract prop bindings from parsed tag attributes
+  # Attrs format: [{"prop_name", [{:expression, "{expr}"} | {:text, "val"}]}]
+  defp extract_bindings_from_attrs(attrs) do
+    Enum.map(attrs, fn {prop_name, value_parts} ->
+      expression =
+        value_parts
+        |> Enum.map(fn
+          {:expression, expr_str} ->
+            # Strip outer braces: "{ post}" → "post"
+            expr_str
+            |> String.trim()
+            |> String.replace_leading("{", "")
+            |> String.replace_trailing("}", "")
+            |> String.trim()
+
+          {:text, text} ->
+            text
+        end)
+        |> Enum.join()
+
+      %{prop: prop_name, expression: expression}
+    end)
+  end
+
   def extract_params_info(source_path, func_name, action_name) do
     case File.read(source_path) do
       {:ok, content} ->
