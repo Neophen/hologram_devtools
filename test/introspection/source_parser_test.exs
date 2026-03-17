@@ -1,7 +1,7 @@
-defmodule HologramDevtools.Introspection.SourceParserTest do
+defmodule HoloDev.Introspection.SourceParserTest do
   use ExUnit.Case
 
-  alias HologramDevtools.Introspection.SourceParser
+  alias HoloDev.Introspection.SourceParser
 
   @fixture_dir Path.join([__DIR__, "..", "support", "fixtures"]) |> Path.expand()
 

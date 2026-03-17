@@ -1,12 +1,12 @@
 if Code.ensure_loaded?(Igniter.Mix.Task) do
-  defmodule Mix.Tasks.HologramDevtools.Install do
+  defmodule Mix.Tasks.HoloDev.Install do
     @moduledoc """
-    Installs HologramDevtools into your project.
+    Installs HoloDev into your project.
 
-        mix igniter.install hologram_devtools
+        mix igniter.install holo_dev
 
     This will:
-    - Add `{:hologram_devtools, "~> 0.1", only: :dev}` to your deps
+    - Add `{:holo_dev, "~> 0.1", only: :dev}` to your deps
     - Add `.hologram/` to your `.gitignore`
     """
     use Igniter.Mix.Task
@@ -14,15 +14,15 @@ if Code.ensure_loaded?(Igniter.Mix.Task) do
     @impl Igniter.Mix.Task
     def info(_argv, _composing_task) do
       %Igniter.Mix.Task.Info{
-        group: :hologram_devtools,
-        adds_deps: [{:hologram_devtools, "~> 0.1"}]
+        group: :holo_dev,
+        adds_deps: [{:holo_dev, "~> 0.1"}]
       }
     end
 
     @impl Igniter.Mix.Task
     def igniter(igniter) do
       igniter
-      |> Igniter.Project.Deps.add_dep({:hologram_devtools, "~> 0.1", only: :dev})
+      |> Igniter.Project.Deps.add_dep({:holo_dev, "~> 0.1", only: :dev})
       |> add_to_gitignore()
     end
 

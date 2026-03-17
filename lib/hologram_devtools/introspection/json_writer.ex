@@ -1,8 +1,8 @@
-defmodule HologramDevtools.Introspection.JsonWriter do
+defmodule HoloDev.Introspection.JsonWriter do
   @moduledoc false
 
   def write(data, output_dir \\ nil) do
-    dir = output_dir || HologramDevtools.output_dir()
+    dir = output_dir || HoloDev.output_dir()
     File.mkdir_p!(dir)
 
     write_json(dir, "pages.json", data.pages)

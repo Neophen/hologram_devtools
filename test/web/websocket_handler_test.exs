@@ -1,7 +1,7 @@
-defmodule HologramDevtools.Web.WebSocketHandlerTest do
+defmodule HoloDev.Web.WebSocketHandlerTest do
   use ExUnit.Case
 
-  alias HologramDevtools.Web.WebSocketHandler
+  alias HoloDev.Web.WebSocketHandler
 
   describe "handle_in/2" do
     setup do

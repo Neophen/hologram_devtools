@@ -1,25 +1,25 @@
-defmodule HologramDevtools.Application do
+defmodule HoloDev.Application do
   @moduledoc false
   use Application
 
   @impl Application
   def start(_type, _args) do
-    if HologramDevtools.disabled?() do
-      Supervisor.start_link([], strategy: :one_for_one, name: HologramDevtools.Supervisor)
+    if HoloDev.disabled?() do
+      Supervisor.start_link([], strategy: :one_for_one, name: HoloDev.Supervisor)
     else
       children = [
-        {Registry, keys: :duplicate, name: HologramDevtools.WebSocketRegistry},
-        HologramDevtools.Introspection.Store,
-        HologramDevtools.Introspection.Watcher,
-        {Bandit, plug: HologramDevtools.Web.Endpoint, port: HologramDevtools.port(), ip: {127, 0, 0, 1}}
+        {Registry, keys: :duplicate, name: HoloDev.WebSocketRegistry},
+        HoloDev.Introspection.Store,
+        HoloDev.Introspection.Watcher,
+        {Bandit, plug: HoloDev.Web.Endpoint, port: HoloDev.port(), ip: {127, 0, 0, 1}}
       ]
 
-      opts = [strategy: :one_for_one, name: HologramDevtools.Supervisor]
+      opts = [strategy: :one_for_one, name: HoloDev.Supervisor]
 
       case Supervisor.start_link(children, opts) do
         {:ok, pid} ->
-          IO.puts("[HologramDevtools] Running at http://localhost:#{HologramDevtools.port()}")
-          IO.puts("[HologramDevtools] WebSocket at ws://localhost:#{HologramDevtools.port()}/ws")
+          IO.puts("[HoloDev] Running at http://localhost:#{HoloDev.port()}")
+          IO.puts("[HoloDev] WebSocket at ws://localhost:#{HoloDev.port()}/ws")
           {:ok, pid}
 
         error ->

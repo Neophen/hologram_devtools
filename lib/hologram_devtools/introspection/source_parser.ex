@@ -1,4 +1,4 @@
-defmodule HologramDevtools.Introspection.SourceParser do
+defmodule HoloDev.Introspection.SourceParser do
   @moduledoc false
 
   def get_source_file(mod) do

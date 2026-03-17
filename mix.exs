@@ -1,17 +1,17 @@
-defmodule HologramDevtools.MixProject do
+defmodule HoloDev.MixProject do
   use Mix.Project
 
   @version "0.1.4"
-  @source_url "https://github.com/Neophen/hologram_devtools"
+  @source_url "https://github.com/Neophen/holo_dev"
 
   def project do
     [
-      app: :hologram_devtools,
+      app: :holo_dev,
       version: @version,
       elixir: "~> 1.18",
       start_permanent: false,
       deps: deps(),
-      name: "HologramDevtools",
+      name: "HoloDev",
       description: "Development tools for the Hologram framework — introspection, devtools UI, and IDE support",
       source_url: @source_url,
       package: package(),
@@ -22,7 +22,7 @@ defmodule HologramDevtools.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      mod: {HologramDevtools.Application, []}
+      mod: {HoloDev.Application, []}
     ]
   end
 
@@ -58,25 +58,25 @@ defmodule HologramDevtools.MixProject do
         LICENSE: [title: "License"]
       ],
       groups_for_extras: [
-        "Welcome to HologramDevtools": ~w(guides/welcome.md guides/installation.md),
+        "Welcome to HoloDev": ~w(guides/welcome.md guides/installation.md),
         Configuration: ~w(guides/configuration.md),
         Changelog: ~w(CHANGELOG.md)
       ],
       groups_for_modules: [
         "Introspection": [
-          HologramDevtools.Introspection.Extractor,
-          HologramDevtools.Introspection.PageExtractor,
-          HologramDevtools.Introspection.ComponentExtractor,
-          HologramDevtools.Introspection.ResourceExtractor,
-          HologramDevtools.Introspection.ModuleLocator,
-          HologramDevtools.Introspection.SourceParser,
-          HologramDevtools.Introspection.JsonWriter,
-          HologramDevtools.Introspection.Store,
-          HologramDevtools.Introspection.Watcher
+          HoloDev.Introspection.Extractor,
+          HoloDev.Introspection.PageExtractor,
+          HoloDev.Introspection.ComponentExtractor,
+          HoloDev.Introspection.ResourceExtractor,
+          HoloDev.Introspection.ModuleLocator,
+          HoloDev.Introspection.SourceParser,
+          HoloDev.Introspection.JsonWriter,
+          HoloDev.Introspection.Store,
+          HoloDev.Introspection.Watcher
         ],
         "Web": [
-          HologramDevtools.Web.Endpoint,
-          HologramDevtools.Web.WebSocketHandler
+          HoloDev.Web.Endpoint,
+          HoloDev.Web.WebSocketHandler
         ]
       ]
     ]

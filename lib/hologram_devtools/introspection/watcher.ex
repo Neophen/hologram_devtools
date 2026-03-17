@@ -1,4 +1,4 @@
-defmodule HologramDevtools.Introspection.Watcher do
+defmodule HoloDev.Introspection.Watcher do
   @moduledoc false
   use GenServer
 
@@ -37,8 +37,8 @@ defmodule HologramDevtools.Introspection.Watcher do
       _ -> :ok
     end
 
-    HologramDevtools.Introspection.Store.refresh()
-    IO.puts("[HologramDevtools] Introspection updated at #{DateTime.utc_now() |> DateTime.to_iso8601()}")
+    HoloDev.Introspection.Store.refresh()
+    IO.puts("[HoloDev] Introspection updated at #{DateTime.utc_now() |> DateTime.to_iso8601()}")
 
     {:noreply, %{state | timer: nil}}
   end

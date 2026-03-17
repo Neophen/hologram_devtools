@@ -1,7 +1,7 @@
-defmodule HologramDevtools.Introspection.ExtractorTest do
+defmodule HoloDev.Introspection.ExtractorTest do
   use ExUnit.Case
 
-  alias HologramDevtools.Introspection.Extractor
+  alias HoloDev.Introspection.Extractor
 
   test "run/0 returns a map with pages, components, resources, and modules" do
     result = Extractor.run()

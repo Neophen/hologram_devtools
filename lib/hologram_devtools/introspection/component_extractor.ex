@@ -1,7 +1,7 @@
-defmodule HologramDevtools.Introspection.ComponentExtractor do
+defmodule HoloDev.Introspection.ComponentExtractor do
   @moduledoc false
 
-  alias HologramDevtools.Introspection.SourceParser
+  alias HoloDev.Introspection.SourceParser
 
   def extract(modules) do
     modules

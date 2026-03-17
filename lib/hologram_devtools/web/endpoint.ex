@@ -1,4 +1,4 @@
-defmodule HologramDevtools.Web.Endpoint do
+defmodule HoloDev.Web.Endpoint do
   @moduledoc false
   use Plug.Router
 
@@ -17,45 +17,45 @@ defmodule HologramDevtools.Web.Endpoint do
 
   get "/ws" do
     conn
-    |> Plug.Conn.upgrade_adapter(:websocket, {HologramDevtools.Web.WebSocketHandler, [], []})
+    |> Plug.Conn.upgrade_adapter(:websocket, {HoloDev.Web.WebSocketHandler, [], []})
   end
 
   get "/" do
-    pages = HologramDevtools.Introspection.Store.pages()
-    components = HologramDevtools.Introspection.Store.components()
-    resources = HologramDevtools.Introspection.Store.resources()
+    pages = HoloDev.Introspection.Store.pages()
+    components = HoloDev.Introspection.Store.components()
+    resources = HoloDev.Introspection.Store.resources()
 
     html = render_overview(pages, components, resources)
     send_resp(conn, 200, html)
   end
 
   get "/api/pages" do
-    data = HologramDevtools.Introspection.Store.pages()
+    data = HoloDev.Introspection.Store.pages()
     send_json(conn, data)
   end
 
   get "/api/components" do
-    data = HologramDevtools.Introspection.Store.components()
+    data = HoloDev.Introspection.Store.components()
     send_json(conn, data)
   end
 
   get "/api/resources" do
-    data = HologramDevtools.Introspection.Store.resources()
+    data = HoloDev.Introspection.Store.resources()
     send_json(conn, data)
   end
 
   get "/api/modules" do
-    data = HologramDevtools.Introspection.Store.modules()
+    data = HoloDev.Introspection.Store.modules()
     send_json(conn, data)
   end
 
   get "/api/overview" do
-    pages = HologramDevtools.Introspection.Store.pages()
-    components = HologramDevtools.Introspection.Store.components()
-    resources = HologramDevtools.Introspection.Store.resources()
+    pages = HoloDev.Introspection.Store.pages()
+    components = HoloDev.Introspection.Store.components()
+    resources = HoloDev.Introspection.Store.resources()
 
     overview = %{
-      version: HologramDevtools.version(),
+      version: HoloDev.version(),
       pages: map_size(pages),
       components: map_size(components),
       resources: map_size(resources)
@@ -65,7 +65,7 @@ defmodule HologramDevtools.Web.Endpoint do
   end
 
   get "/health" do
-    send_json(conn, %{status: "ok", version: HologramDevtools.version()})
+    send_json(conn, %{status: "ok", version: HoloDev.version()})
   end
 
   match _ do
@@ -171,7 +171,7 @@ defmodule HologramDevtools.Web.Endpoint do
     </head>
     <body>
       <h1>Hologram DevTools</h1>
-      <p class="subtitle">v#{HologramDevtools.version()}</p>
+      <p class="subtitle">v#{HoloDev.version()}</p>
 
       <div class="stats">
         <div class="stat">
@@ -233,7 +233,7 @@ defmodule HologramDevtools.Web.Endpoint do
         <a href="/api/overview">overview</a>
       </div>
 
-      <p class="version">Auto-refreshes on file changes. JSON files at <code>#{HologramDevtools.output_dir()}/</code></p>
+      <p class="version">Auto-refreshes on file changes. JSON files at <code>#{HoloDev.output_dir()}/</code></p>
     </body>
     </html>
     """

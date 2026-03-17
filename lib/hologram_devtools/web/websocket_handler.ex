@@ -1,13 +1,13 @@
-defmodule HologramDevtools.Web.WebSocketHandler do
+defmodule HoloDev.Web.WebSocketHandler do
   @moduledoc false
   @behaviour WebSock
 
-  alias HologramDevtools.Introspection.Store
+  alias HoloDev.Introspection.Store
 
   @impl WebSock
   def init(_args) do
     # Register this process to receive introspection updates
-    Registry.register(HologramDevtools.WebSocketRegistry, :clients, %{})
+    Registry.register(HoloDev.WebSocketRegistry, :clients, %{})
     {:ok, %{subscribed_events: false}}
   end
 
@@ -119,7 +119,7 @@ defmodule HologramDevtools.Web.WebSocketHandler do
     resources = Store.resources()
 
     %{
-      version: HologramDevtools.version(),
+      version: HoloDev.version(),
       pages: map_size(pages),
       components: map_size(components),
       resources: map_size(resources)

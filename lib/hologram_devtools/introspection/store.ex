@@ -1,10 +1,10 @@
-defmodule HologramDevtools.Introspection.Store do
+defmodule HoloDev.Introspection.Store do
   @moduledoc false
   use GenServer
 
-  alias HologramDevtools.Introspection.{Extractor, JsonWriter}
+  alias HoloDev.Introspection.{Extractor, JsonWriter}
 
-  @table :hologram_devtools_introspection
+  @table :holo_dev_introspection
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -44,14 +44,14 @@ defmodule HologramDevtools.Introspection.Store do
     try do
       JsonWriter.write(data)
     rescue
-      e -> IO.warn("[HologramDevtools] Failed to write JSON: #{inspect(e)}")
+      e -> IO.warn("[HoloDev] Failed to write JSON: #{inspect(e)}")
     end
 
     data
   end
 
   defp notify_websocket_clients do
-    Registry.dispatch(HologramDevtools.WebSocketRegistry, :clients, fn entries ->
+    Registry.dispatch(HoloDev.WebSocketRegistry, :clients, fn entries ->
       for {pid, _value} <- entries do
         send(pid, :introspection_updated)
       end

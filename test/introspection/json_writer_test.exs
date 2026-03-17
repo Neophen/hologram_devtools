@@ -1,9 +1,9 @@
-defmodule HologramDevtools.Introspection.JsonWriterTest do
+defmodule HoloDev.Introspection.JsonWriterTest do
   use ExUnit.Case
 
-  alias HologramDevtools.Introspection.JsonWriter
+  alias HoloDev.Introspection.JsonWriter
 
-  @test_dir Path.join(System.tmp_dir!(), "hologram_devtools_test_#{:rand.uniform(100_000)}")
+  @test_dir Path.join(System.tmp_dir!(), "holo_dev_test_#{:rand.uniform(100_000)}")
 
   setup do
     File.mkdir_p!(@test_dir)

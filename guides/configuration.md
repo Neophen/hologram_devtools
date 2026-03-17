@@ -1,12 +1,12 @@
 # Configuration
 
-HologramDevtools works out of the box with sensible defaults, but you can customize its behavior in your `config/dev.exs`.
+HoloDev works out of the box with sensible defaults, but you can customize its behavior in your `config/dev.exs`.
 
 ## Options
 
 ```elixir
 # config/dev.exs
-config :hologram_devtools,
+config :holo_dev,
   port: 4008,
   output_dir: ".hologram",
   disabled?: false
@@ -20,7 +20,7 @@ The port for the devtools web UI and WebSocket server.
 - **Type:** integer
 
 ```elixir
-config :hologram_devtools, port: 9000
+config :holo_dev, port: 9000
 ```
 
 ### `output_dir`
@@ -31,7 +31,7 @@ The directory where introspection JSON files are written. These files contain th
 - **Type:** string (path)
 
 ```elixir
-config :hologram_devtools, output_dir: ".hologram"
+config :holo_dev, output_dir: ".hologram"
 ```
 
 > #### Tip {: .tip}
@@ -40,11 +40,11 @@ config :hologram_devtools, output_dir: ".hologram"
 
 ### `disabled?`
 
-Completely disables HologramDevtools. When set to `true`, the web server and file watcher will not start.
+Completely disables HoloDev. When set to `true`, the web server and file watcher will not start.
 
 - **Default:** `false`
 - **Type:** boolean
 
 ```elixir
-config :hologram_devtools, disabled?: true
+config :holo_dev, disabled?: true
 ```

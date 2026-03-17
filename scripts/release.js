@@ -135,7 +135,7 @@ try {
 
 const changelogEntry = askClaude(
   [
-    `Generate a changelog entry for v${nextVersion} of the "HologramDevtools" Elixir package.`,
+    `Generate a changelog entry for v${nextVersion} of the "HoloDev" Elixir package.`,
     "",
     `Commits since ${lastTag}:`,
     commits,

@@ -1,7 +1,7 @@
-defmodule HologramDevtools.Introspection.Extractor do
+defmodule HoloDev.Introspection.Extractor do
   @moduledoc false
 
-  alias HologramDevtools.Introspection.{
+  alias HoloDev.Introspection.{
     PageExtractor,
     ComponentExtractor,
     ResourceExtractor,

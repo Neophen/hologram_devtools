@@ -1,22 +1,22 @@
 {
-  "HologramDevtools": {
+  "HoloDev": {
     "line": 1,
-    "file": "lib/hologram_devtools.ex"
+    "file": "lib/holo_dev.ex"
   },
-  "HologramDevtools.Application": {
+  "HoloDev.Application": {
     "line": 1,
-    "file": "lib/hologram_devtools/application.ex"
+    "file": "lib/holo_dev/application.ex"
   },
-  "HologramDevtools.Introspection.Extractor": {
+  "HoloDev.Introspection.Extractor": {
     "line": 1,
-    "file": "lib/hologram_devtools/introspection/extractor.ex"
+    "file": "lib/holo_dev/introspection/extractor.ex"
   },
-  "HologramDevtools.Introspection.Store": {
+  "HoloDev.Introspection.Store": {
     "line": 1,
-    "file": "lib/hologram_devtools/introspection/store.ex"
+    "file": "lib/holo_dev/introspection/store.ex"
   },
-  "HologramDevtools.Introspection.Watcher": {
+  "HoloDev.Introspection.Watcher": {
     "line": 1,
-    "file": "lib/hologram_devtools/introspection/watcher.ex"
+    "file": "lib/holo_dev/introspection/watcher.ex"
   }
 }

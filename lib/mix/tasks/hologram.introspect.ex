@@ -17,9 +17,9 @@ defmodule Mix.Tasks.Hologram.Introspect do
   def run(_args) do
     Mix.Task.run("app.start")
 
-    alias HologramDevtools.Introspection.{Extractor, JsonWriter}
+    alias HoloDev.Introspection.{Extractor, JsonWriter}
 
-    output_dir = HologramDevtools.output_dir()
+    output_dir = HoloDev.output_dir()
     data = Extractor.run()
     JsonWriter.write(data, output_dir)
 

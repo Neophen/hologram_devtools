@@ -1,4 +1,4 @@
-defmodule HologramDevtools do
+defmodule HoloDev do
   @moduledoc """
   Development tools for the Hologram framework.
 
@@ -11,14 +11,14 @@ defmodule HologramDevtools do
   def version, do: @version
 
   def disabled? do
-    Application.get_env(:hologram_devtools, :disabled?, false)
+    Application.get_env(:holo_dev, :disabled?, false)
   end
 
   def port do
-    Application.get_env(:hologram_devtools, :port, 4008)
+    Application.get_env(:holo_dev, :port, 4008)
   end
 
   def output_dir do
-    Application.get_env(:hologram_devtools, :output_dir, ".hologram")
+    Application.get_env(:holo_dev, :output_dir, ".hologram")
   end
 end
