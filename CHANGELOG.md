@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.16
+
+### New Features
+- **Template structure extraction** for analyzing component relationships
+- **Live component state tracking** and snapshots
+- **Page rendering** with layout module support
+- **Real-time bridge** for client communication
+
+### Improvements
+- Enhanced component introspection with template prop detection
+- New state management with LiveStateStore
+
+### Fixes
+- Fixed component tree structure
+
 ## 0.4.15
 
 ## 0.4.14
